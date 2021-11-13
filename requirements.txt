@@ -39,8 +39,10 @@ et-xmlfile==1.1.0
 filelock==3.0.12
 Fiona==1.8.20
 Flask==2.0.1
+folium==0.12.1
 GDAL==3.3.3
 geographiclib==1.52
+geopandas==0.10.2
 geopy==2.2.0
 gitdb==4.0.7
 GitPython==3.1.24
@@ -80,7 +82,9 @@ nest-asyncio==1.5.1
 nominatim==0.1
 notebook==6.4.3
 numpy==1.21.3
+openpyxl==3.0.9
 packaging @ file:///private/tmp/sip--packaging-20211101-68525-1ftj55f/packaging-21.2
+pandas==1.3.4
 pandocfilters==1.4.3
 parso==0.8.2
 pexpect==4.8.0
@@ -99,6 +103,7 @@ pycparser==2.20
 pydeck==0.7.0
 Pygments==2.10.0
 pymongo==3.12.0
+Pympler==0.9
 pyparsing==2.4.7
 pyproj==3.0.1
 PyQt3D==5.15.4
@@ -123,6 +128,7 @@ pytz==2021.1
 pyzmq==22.2.1
 rasterio==1.2.10
 requests==2.25.1
+Rtree==0.9.7
 Send2Trash==1.8.0
 Shapely==1.7.1
 sip==6.4.0
@@ -133,6 +139,8 @@ snuggs==1.4.7
 SQLAlchemy==1.4.19
 sqlparse==0.4.1
 starlette==0.16.0
+streamlit==1.2.0
+streamlit-folium==0.4.0
 TBB==0.2
 terminado==0.11.1
 testpath==0.5.0

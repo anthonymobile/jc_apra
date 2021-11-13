@@ -7,3 +7,5 @@ numpy
 altair
 folium
 contextily
+pygeos
+rtree

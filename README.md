@@ -1,7 +1,13 @@
 # jc_apra
 
 
-# deployment
+
+# heroku deployment
+
+n.b. this app requires the https://github.com/heroku/heroku-geo-buildpack.git buildpack
+
+`heroku buildpacks:set https://github.com/heroku/heroku-geo-buildpack.git`
+
 
 1. update requirements.txt
 
@@ -15,6 +21,4 @@ git push'
 
 3. deploy to heroku also
 `git push heroku main`
-
-
 

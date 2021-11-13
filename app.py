@@ -127,7 +127,7 @@ st.subheader(f'Vacant and abandoned buildings are everywhere.')
 # ward_expander = st.expander(label='How many vacant and abandoned buildings are in my ward?')
 # with ward_expander:
 
-st.markdown('There are vacant and abandoned buildings throughout every ward.')
+st.markdown('Every ward has vacant and abandoned buildings throughout. There are vacant and abandoned buildings on almost every block. *Missing data for 2019 and 2020 will be filled in as it is made available by city officials.')
 
 # load shapefile and set crs
 neighborhood_map = gpd.read_file('./maps/neighborhoods/Neighborhoods3.shp')
@@ -146,8 +146,8 @@ gdf_by_neighborhood['year'] = gdf_by_neighborhood['date'].dt.year
 
 result = pd.pivot_table(gdf_by_neighborhood, values='street_address', index=['District'],
                     columns=['year'], aggfunc=np.size)
-result[2019] = ''
-result[2020] = ''
+result[2019] = '*'
+result[2020] = '*'
 result = result.sort_index(axis=1).fillna('')
 
 # TODO format the float to 0 places
@@ -192,8 +192,6 @@ st.table(result)
 # Citywide Map
 # map_expander = st.expander(label='Are there vacant and abandoned buildings on my block?')
 # with map_expander:
-
-st.markdown('There are vacant and abandoned buildings on almost every block.')
 
 # use streamlit-folium
 # https://discuss.streamlit.io/t/ann-streamlit-folium-a-component-for-rendering-folium-maps/4367

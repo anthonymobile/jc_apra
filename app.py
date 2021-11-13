@@ -19,62 +19,188 @@ import folium
 ###################################################################
 # load and prepare data
 
-gdf = read_excel_data()
-df_v = gdf[gdf['type']== 'Vacant']
+gdf = read_excel_data().set_crs(epsg=4326)
+df_v = gdf[gdf['type']== 'Vacant'].copy()
 df_v['year'] = df_v['date'].dt.year
-df_a = gdf[gdf['type']== 'Abandoned']
+df_a = gdf[gdf['type']== 'Abandoned'].copy()
 df_a['year'] = df_a['date'].dt.year
-                  
+             
 
 ###################################################################
 # header
 
-image = Image.open('./www/photo.jpg')
-grayscale = image.convert('LA')
-st.image(grayscale, caption='170 Grant Avenue, circa 2017. Photo by Jersey Digs.')
 
-st.header('Jersey City has a big problem with vacant buildings.')
+st.header('Jersey City still has a big problem with vacant and abandoned buildings.')
 
 st.markdown('The Jersey City housing market has gone through many changes in recent years. Yet one thing has remained constant—neglect and warehousing of property by speculators and absentee landlords. Despite a reduction in the overall number of vacant and abandoned buildings, this is a stubborn and widespread problem.') 
 
-st.markdown('The Abandoned Property Rehabilitation Act (APRA), adopted by the State of New Jersey in 2004, requires municipalities to maintain a list of vacant and abandoned properties. The data on this site are collated from lists published by the City of Jersey City since 2014. A copy of the collated, cleaned, and geocoded data can be downloaded here.')
+###################################################################
+# METRICS + CHARTS
+###################################################################
+
+###################################################################
+# Metrics
+
+# st.subheader(f"How are we doing in {datetime.datetime.now().year}?")
+# st.markdown('Progress on vacant buildings has been slow.')
+
+num_a, num_v, delta_a, delta_v = generate_trend_metrics(gdf)
+
+col1, col2 = st.columns(2)
+
+###################################################################
+# Abandoned
+# col1.subheader('Abandoned Properties')
+col1.metric("Abandoned Properties", f'{num_a:.0f}', f"{delta_a:.0f} this year", delta_color="inverse")
+
+## streamlit version
+# col1.line_chart(df_a['year'].value_counts())
+
+# altair version
+source = df_a.value_counts(subset=['year']).to_frame(name='num')
+source = source.reset_index()
+alt.renderers.set_embed_options(actions=False) #BUG doesnt work outside Jupyter notebook
+c = alt.Chart(source).mark_line().encode(
+    x=alt.X('year', axis=alt.Axis(format='.0f', title='Year', labelAngle=270)),
+    y=alt.Y('num', axis=alt.Axis(format='.0f', title='No. of abandoned buildings')),
+    tooltip=['year', 'num']
+)
+col1.altair_chart(c, use_container_width=True)
+
+
+
+###################################################################
+# Vacant
+# col2.subheader('Vacant Properties')
+col2.metric("Vacant Properties", f'{num_v:.0f}', f"{delta_v:.0f} this year", delta_color="inverse")
+
+## streamlit version
+# col1.line_chart(df_v['year'].value_counts())
+
+# altair version
+source = df_v.value_counts(subset=['year']).to_frame(name='num')
+source = source.reset_index()
+
+c = alt.Chart(source).mark_line().encode(
+    x=alt.X('year', axis=alt.Axis(format='.0f', title='Year', labelAngle=270)),
+    y=alt.Y('num', axis=alt.Axis(format='.0f', title='No. of vacant buildings')),
+    tooltip=['year', 'num']
+)
+col2.altair_chart(c, use_container_width=True)
 
 
 
 
 ###################################################################
-# Map
+# DISTRICT TABLES
+###################################################################
+st.subheader(f'Vacant and abandoned buildings are everywhere.')
+
+
+# ###################################################################
+# # Ward Table
+
+# ward_expander = st.expander(label='How many vacant and abandoned buildings are in my ward?')
+# with ward_expander:
+    
+#     st.header('ADD A SMALL CHLOROPLETH MAP HERE')
+    
+#     ward_map = gpd.read_file('./maps/wards/ward2012.shp')
+#     ward_map = ward_map.to_crs(epsg=4326)
+#     gdf_by_ward=gpd.sjoin(gdf, ward_map, how='left', predicate="within")
+#     gdf_by_ward['year'] = gdf_by_ward['date'].dt.year
+#     result = pd.pivot_table(
+#         gdf_by_ward, 
+#         values='street_address', 
+#         index=['WARD2'],           
+#         columns=['year'], 
+#         aggfunc=np.size
+#     )
+#     result[2019] = ''
+#     result[2020] = ''
+#     result = result.sort_index(axis=1)
+#     st.table(result)
+
+###################################################################
+# Ward Table (alt, using neighborhood map)
+
+# ward_expander = st.expander(label='How many vacant and abandoned buildings are in my ward?')
+# with ward_expander:
+
+st.markdown('There are vacant and abandoned buildings throughout every ward.')
+
+# load shapefile and set crs
+neighborhood_map = gpd.read_file('./maps/neighborhoods/Neighborhoods3.shp')
+neighborhood_map = neighborhood_map.to_crs(epsg=4326)
+
+# spatial join
+gdf_by_neighborhood=gpd.sjoin(gdf, neighborhood_map, how='left', predicate="within")
+
+
+# make pivot table
+table = pd.pivot_table(gdf_by_neighborhood, values='street_address', index=['Nghbhd'],
+                    columns=['date'], aggfunc=np.size)
+# clean up and render
+
+gdf_by_neighborhood['year'] = gdf_by_neighborhood['date'].dt.year
+
+result = pd.pivot_table(gdf_by_neighborhood, values='street_address', index=['District'],
+                    columns=['year'], aggfunc=np.size)
+result[2019] = ''
+result[2020] = ''
+result = result.sort_index(axis=1).fillna('')
+
+# TODO format the float to 0 places
+# pd.options.display.float_format = '{:.0f}'.format
+st.table(result)
+
+
+# ###################################################################
+# # Neighborhood Table
+# hood_expander = st.expander(label='How many vacant and abandoned buildings are in my neighborhood?')
+# with hood_expander:
+    
+#     st.header('ADD A SMALL CHLOROPLETH MAP HERE')
+    
+#     # load shapefile and set crs
+#     neighborhood_map = gpd.read_file('./maps/neighborhoods/Neighborhoods3.shp')
+#     neighborhood_map = neighborhood_map.to_crs(epsg=4326)
+
+#     # spatial join
+#     gdf_by_neighborhood=gpd.sjoin(gdf, neighborhood_map, how='left', predicate="within")
+
+
+#     # make pivot table
+#     table = pd.pivot_table(gdf_by_neighborhood, values='street_address', index=['Nghbhd'],
+#                         columns=['date'], aggfunc=np.size)
+#     # clean up and render
+
+#     gdf_by_neighborhood['year'] = gdf_by_neighborhood['date'].dt.year
+
+#     result = pd.pivot_table(gdf_by_neighborhood, values='street_address', index=['Nghbhd'],
+#                         columns=['year'], aggfunc=np.size)
+#     result[2019] = ''
+#     result[2020] = ''
+#     result = result.sort_index(axis=1).fillna('')
+    
+#     # TODO format the float to 0 places
+#     # pd.options.display.float_format = '{:.0f}'.format
+#     st.table(result)
+
+    
+###################################################################
+# Citywide Map
+# map_expander = st.expander(label='Are there vacant and abandoned buildings on my block?')
+# with map_expander:
+
+st.markdown('There are vacant and abandoned buildings on almost every block.')
 
 # use streamlit-folium
 # https://discuss.streamlit.io/t/ann-streamlit-folium-a-component-for-rendering-folium-maps/4367
 
-st.subheader('Vacant buildings are a citywide problem.')
-
-st.markdown('Vacant buildings are a citywide problem. Lores mumps dolor sit mate, nominal id xiv. Dec ore offend it man re, est no dolor es explicate, re dicta elect ram demo critic duo. Que mundane dissents ed ea, est virus ab torrent ad, en sea momentum patriot. Erato dolor em omit tam quo no, per leg ere argument um re. Romanesque acclimates investiture.')
-
-# # center on Liberty Bell
-# m = folium.Map(location=[39.949610, -75.150282], zoom_start=16)
-
-# # add marker for Liberty Bell
-# tooltip = "Liberty Bell"
-# folium.Marker(
-#     [39.949610, -75.150282], popup="Liberty Bell", tooltip=tooltip
-# ).add_to(m)
-
-# # call to render Folium map in Streamlit
-# folium_static(m)
-
-###################################################################
-# Map
-
-# MAKE MAP
-# https://geopandas.readthedocs.io/en/latest/gallery/plotting_with_folium.html
-
-
-
 # Stamen Toner
 map = folium.Map(
-    location=[40.7128,-74.1],
+    location=[40.725,-74.075],
     tiles='Stamen Toner',
     zoom_start=13)
 
@@ -97,12 +223,12 @@ for coordinates in geo_df_list:
     else:
         type_color = "gray"
 
-        
+
     # alternate symbol
     # adapted from
     # https://stackoverflow.com/questions/33575053/change-marker-in-folium-map
     # and https://stackoverflow.com/questions/63152298/updating-folium-changed-the-popup-box-width
-    
+
     html = "Address: " + str(gdf.street_address.iloc[i]) + '<br>' + \
            "Date: " + str(gdf.date.iloc[i]) + '<br>' + \
            "Status: " + str(gdf['type'].iloc[i])
@@ -110,101 +236,35 @@ for coordinates in geo_df_list:
     popup = folium.Popup(iframe,
                          min_width=250,
                          max_width=250)
-        
+
     map.add_child(folium.CircleMarker(location = coordinates, 
                                       radius = 5, 
                                       popup = popup,
                                       fill_color=type_color,
                                       color=type_color, 
                                       fill_opacity=0.7))
-    
+
     i = i + 1
 
 
 folium_static(map)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###################################################################
-# Metrics
-
-
-num_a, num_v, delta_a, delta_v = generate_trend_metrics(gdf)
-
-st.subheader(f'How are we doing in {datetime.datetime.now().year}?')
-
-st.markdown('Progress on vacant buildings has been slow.')
-
-
-col1, col2 = st.columns(2)
-
+# NOTICE
 ###################################################################
-# Abandoned
-# col1.subheader('Abandoned Properties')
-col1.metric("Abandoned Properties", num_a, f"{delta_a} this year", delta_color="inverse")
-col1.line_chart(df_a['year'].value_counts())
 
-###################################################################
-# Vacant
-# col2.subheader('Vacant Properties')
-col2.metric("Vacant Properties", num_v, f"{delta_v} this year", delta_color="inverse")
-col2.line_chart(df_v['year'].value_counts())
+st.subheader('Where does this data come from?')
+
+st.markdown('The Abandoned Property Rehabilitation Act (APRA), adopted by the State of New Jersey in 2004, requires municipalities to maintain a list of vacant and abandoned properties. The data on this site are collated from lists published by the City of Jersey City since 2014. We are currently awaiting 2019 and 2020 figures through an Open Public Records Act (OPRA) request. A copy of the collated, cleaned, and geocoded data can be downloaded here.')
 
 
-st.subheader(f'How has the stock of vacants changed across the city over time?')
-
-st.markdown('Progress on vacant buildings has also been uneven.')
+image = Image.open('./www/163-clerk-st.png')
+grayscale = image.convert('LA')
+st.image(grayscale, caption='163 Clerk Street, Jersey City, New Jersey, January 2015. Photo by Jersey Digs.')
 
 
 
-###################################################################
-# Ward Table
-ward_expander = st.expander(label='History by Ward')
-with ward_expander:
-    'Hello there!'
-    click_ward = st.button('Click me!')
-
-###################################################################
-# Neighborhood Table
-hood_expander = st.expander(label='History by Neighborhood')
-with hood_expander:
-    'Hello there!'
-    click_hood = st.button('Click me muther $@$@#$!')
 
 
 
-# ###################################################################
-# # Long-term Vacants
-# st.subheader('Long-term Vacancies')
-
-
-# ###################################################################
-# # Map
-# st.subheader('Where are the Vacant and Abandoned Properties?')
-
-
-# year = st.select_slider(
-#     'Select a year to view properties',
-#     options=[2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021])
-# st.write('You picked', year)
-
-
-
-###################################################################
-# Combined
-# st.map(gdf_av)

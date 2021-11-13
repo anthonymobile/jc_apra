@@ -7,7 +7,7 @@ e.g. `mamba create -n apra_deploy python=3.8.12`
 
 2. install requirements
 `source activate apra_deploy
-pip3 install streamlit folium geopandas altair streamlit-folium `
+pip3 install streamlit folium geopandas altair streamlit-folium openpyxl`
 
 3. update requirements.txt
 

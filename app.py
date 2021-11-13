@@ -1,6 +1,7 @@
 # run with 
 # streamlit run app.py --global.dataFrameSerialization="legacy"
 
+
 from geo_functions import *
 
 import streamlit as st
@@ -25,6 +26,31 @@ df_v['year'] = df_v['date'].dt.year
 df_a = gdf[gdf['type']== 'Abandoned'].copy()
 df_a['year'] = df_a['date'].dt.year
              
+###################################################################
+# header and footer 
+# https://discuss.streamlit.io/t/remove-made-with-streamlit-from-bottom-of-app/1370/6
+hide_streamlit_style = """
+            <style>
+                #MainMenu {visibility: hidden;}
+                footer {
+        
+                        visibility: hidden;
+                        
+                        }
+                    footer:after {
+                        content:'2021, 2002 by Chilltown Labs.'; 
+                        visibility: visible;
+                        display: block;
+                        position: relative;
+                        #background-color: red;
+                        padding: 5px;
+                        top: 2px;
+                    }
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True) 
+
+
 
 ###################################################################
 # header
@@ -272,9 +298,5 @@ st.markdown(get_binary_file_downloader_html('./data/gdf_patched.xlsx', ' Data'),
 image = Image.open('./www/163-clerk-st.png')
 grayscale = image.convert('LA')
 st.image(grayscale, caption='163 Clerk Street, Jersey City, New Jersey, January 2015. Photo by Jersey Digs.')
-
-
-
-
 
 

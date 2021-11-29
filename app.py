@@ -228,6 +228,9 @@ map = folium.Map(
     tiles='Stamen Toner',
     zoom_start=13)
 
+# drop all but current year
+gdf = gdf[gdf['date']==datetime.datetime(2021,7,1)]
+
 # Create a geometry list from the GeoDataFrame
 geo_df_list_tmp = [[point.xy[1][0], point.xy[0][0]] for point in gdf.geometry ]
 
@@ -235,6 +238,7 @@ geo_df_list_tmp = [[point.xy[1][0], point.xy[0][0]] for point in gdf.geometry ]
 import math
 
 geo_df_list = [t for t in geo_df_list_tmp if not any(isinstance(n, float) and math.isnan(n) for n in t)]
+
 
 # Iterate through list and add a marker for each address, color-coded by its type.
 i = 0

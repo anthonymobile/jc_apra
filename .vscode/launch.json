@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: get_geo.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/get_geo.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "stopOnEntry": false,
+            "env": {},
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

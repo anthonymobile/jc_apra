@@ -1,0 +1,5 @@
+python-dotenv
+pyairtable
+requests
+googlemaps
+requests-toolbelt

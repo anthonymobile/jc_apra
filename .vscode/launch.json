@@ -11,6 +11,17 @@
             "stopOnEntry": false,
             "env": {},
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: get_tax_account.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/get_tax_account.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "stopOnEntry": false,
+            "env": {},
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

@@ -3,3 +3,4 @@ pyairtable
 requests
 googlemaps
 requests-toolbelt
+bs4

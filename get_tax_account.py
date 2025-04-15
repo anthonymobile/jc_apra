@@ -38,54 +38,129 @@ def get_airtable_records():
     
     return records
 
-def get_tax_account_info(block_id, lot_id):
+def get_tax_account_info(block_id, lot_id, qualifier=""):
     """Scrape tax account information from Jersey City tax website using block and lot IDs."""
-    url = "http://taxes.cityofjerseycity.com/ViewPay?accountNumber=115998"
-    
-    # Form data to submit
-    form_data = {
-        "Block": block_id,
-        "Lot": lot_id
-    }
+    form_url = "http://taxes.cityofjerseycity.com/ViewPay?accountNumber=115998"
     
     try:
-        # Submit the form with block and lot IDs
-        response = requests.post(url, data=form_data)
+        # Start a session to maintain cookies
+        session = requests.Session()
+        
+        # Get the initial page
+        initial_response = session.get(form_url)
+        
+        if initial_response.status_code != 200:
+            return {
+                "url": form_url,
+                "status": "Failed",
+                "error": f"Initial page load failed with HTTP Status: {initial_response.status_code}"
+            }
+        
+        # Revert form data: Reinstate "CurrentAccountNumber" and remove "sAccountNumber"
+        form_data = {
+            "CurrentAccountNumber": "115998",
+            "sAccountNumber": "",
+            "MinimumPaymentAmount": "0",
+            "Block": block_id,
+            "Lot": lot_id,
+            "Qualifier": "",
+            "NInterestThruDate": "",
+            "paymentAmount": "0.00",
+            "SearchRecalc": "Search/Recalc."
+        }
+        
+        # Submit the form
+        response = session.post(form_url, data=form_data)
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Check if we got a valid response
         if response.status_code == 200:
-            # Extract the Account# from the response
-            account_div = soup.find('div', string=lambda text: text and 'Account#:' in text)
-            account_number = None
-            
-            if account_div:
-                # Try to find the account number in the next sibling or parent container
-                next_div = account_div.find_next('div')
-                if next_div:
-                    account_number = next_div.get_text(strip=True)
-            
-            tax_data = {
-                "url": response.url,
-                "status": "Success" if account_number else "No Account Found",
-                "account_number": account_number
+            account_data = {
+                # Store the submitted block/lot for verification
+                "submitted_block": block_id,
+                "submitted_lot": lot_id
             }
             
-            # Extract any additional property information if needed
-            property_info = soup.find('div', class_='property-info')
-            if property_info:
-                tax_data["property_info"] = property_info.get_text(strip=True)
+            # Look for account information
+            account_info = soup.find('input', {'id': 'sAccountNumber'})
+            if account_info and account_info.get('value'):
+                account_data["account_number"] = account_info.get('value')
+            
+            # Extract the Account# and other data from the response
+            account_rows = soup.find_all('div', class_='row')
+            for row in account_rows:
+                # Account number extraction (backup method)
+                if not account_data.get("account_number") and row.find('div', string=lambda text: text and 'Account#:' in text):
+                    account_div = row.find('div', class_='col-md-2')
+                    if account_div and account_div.find('span', class_='red'):
+                        account_number = account_div.find('span', class_='red').get_text(strip=True)
+                        account_data["account_number"] = account_number
+                
+                # Property location extraction
+                if row.find('div', string=lambda text: text and 'Location:' in text):
+                    location_div = row.find('div', class_='col-md-2')
+                    if location_div and location_div.find('span', class_='red'):
+                        location = location_div.find('span', class_='red').get_text(strip=True)
+                        account_data["location"] = location
+                
+                # Extract address
+                if row.find('div', string=lambda text: text and 'Address:' in text):
+                    address_div = row.find('div', class_='col-md-2')
+                    if address_div and address_div.find('span', class_='red'):
+                        address = address_div.find('span', class_='red').get_text(strip=True)
+                        account_data["address"] = address
+                
+                # Extract City/State
+                if row.find('div', string=lambda text: text and 'City/State:' in text):
+                    city_div = row.find('div', class_='col-md-2')
+                    if city_div and city_div.find('span', class_='red'):
+                        city_state = city_div.find('span', class_='red').get_text(strip=True)
+                        account_data["city_state"] = city_state
+                
+                # Extract financial amounts
+                if row.find('div', string=lambda text: text and 'Principal:' in text):
+                    amount_div = row.find('div', class_='col-md-1', style="text-align:right")
+                    if amount_div and amount_div.find('span', class_='red'):
+                        principal = amount_div.find('span', class_='red').get_text(strip=True)
+                        account_data["principal"] = principal
+                
+                if row.find('div', string=lambda text: text and 'Total:' in text):
+                    total_div = row.find('div', class_='col-md-1', style="text-align:right")
+                    if total_div and total_div.find('span', class_='red'):
+                        total = total_div.find('span', class_='red').get_text(strip=True)
+                        account_data["total"] = total
+            
+            # Check if we got an error message
+            error_messages = soup.find('div', {'class': 'validation-summary-errors'})
+            if error_messages:
+                errors = [li.text for li in error_messages.find_all('li')]
+                error_text = ', '.join(errors)
+                return {
+                    "url": response.url,
+                    "status": "Failed",
+                    "error": f"Form submission returned errors: {error_text}"
+                }
+            
+            # Verify if we found the account info or got a no-results page
+            has_account = "account_number" in account_data
+            
+            # Create the return data
+            tax_data = {
+                "url": response.url,
+                "status": "Success" if has_account else "No Account Found",
+                **account_data  # Include all the extracted data
+            }
             
             return tax_data
         else:
             return {
-                "url": url,
+                "url": form_url,
                 "status": "Failed",
-                "error": f"HTTP Status: {response.status_code}"
+                "error": f"Form submission failed with HTTP Status: {response.status_code}"
             }
     except Exception as e:
         return {
-            "url": url,
+            "url": form_url,
             "status": "Error",
             "error": str(e)
         }

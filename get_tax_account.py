@@ -227,9 +227,12 @@ def main():
             
             # Update Airtable record with the tax information
             update_fields = {
-                "Tax Account Status": tax_info["status"],
-                "Tax Account URL": tax_info["url"]
+                "Tax Account Status": tax_info["status"]
             }
+            if "account_number" in tax_info and tax_info["account_number"]:
+                update_fields["Tax Account URL"] = f"http://taxes.cityofjerseycity.com/ViewPay?accountNumber={tax_info['account_number']}"
+            else:
+                update_fields["Tax Account URL"] = tax_info["url"]
             
             # If account number was found, add it to the update
             if "account_number" in tax_info and tax_info["account_number"]:

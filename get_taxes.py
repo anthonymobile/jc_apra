@@ -3,6 +3,7 @@ import requests
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import time
+import datetime  # new import added for date logging
 
 # Load environment variables
 load_dotenv()
@@ -141,6 +142,16 @@ def get_tax_account_info(block_id, lot_id, qualifier=""):
                     "error": f"Form submission returned errors: {error_text}"
                 }
             
+            # New: Set tax_balance to total from account_data (if available) and convert to float
+            if "total" in account_data:
+                total_str = account_data["total"]
+                # Remove currency symbols and commas
+                total_str = total_str.replace("$", "").replace(",", "")
+                try:
+                    account_data["tax_balance"] = float(total_str)
+                except ValueError:
+                    account_data["tax_balance"] = total_str
+            
             # Verify if we found the account info or got a no-results page
             has_account = "account_number" in account_data
             
@@ -240,6 +251,15 @@ def main():
             
             if tax_info["status"] != "Success":
                 update_fields["Tax Account Error"] = tax_info.get("error", "Unknown error")
+                
+            # New: Log the current date in YYYY-MM-DD ISO format in "tax_updated"
+            update_fields["tax_updated"] = datetime.date.today().isoformat()
+            
+            # New: Include tax_balance and tax_days if available
+            if "tax_balance" in tax_info:
+                update_fields["tax_balance"] = tax_info["tax_balance"]
+            if "tax_days" in tax_info:
+                update_fields["tax_days"] = tax_info["tax_days"]
             
             # Update the record in Airtable
             update_result = update_airtable_record(record_id, update_fields)
